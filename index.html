@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Aira - Voice AI</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #050816;
+      color: #ffffff;
+    }
+
+    body {
+      position: relative;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 14px 20px;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      z-index: -2;
+      background: conic-gradient(
+        from 0deg,
+        #0b132b,
+        #2b0d42,
+        #0d3b4c,
+        #3d1328,
+        #102542,
+        #0b132b
+      );
+      animation: slowBgSpin 28s linear infinite;
+      filter: blur(28px) saturate(1.25);
+      opacity: 0.95;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: radial-gradient(circle at center, rgba(4, 10, 24, 0.25) 0%, rgba(2, 6, 15, 0.72) 100%);
+      pointer-events: none;
+    }
+
+    @keyframes slowBgSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .top-box {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      gap: 8px;
+      z-index: 15;
+    }
+
+    #keyInput {
+      flex: 1;
+      background: rgba(5, 14, 30, 0.85);
+      border: 1px solid rgba(41, 244, 255, 0.45);
+      color: #ffffff;
+      padding: 8px 11px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      outline: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    #saveKeyBtn {
+      background: rgba(255, 153, 0, 0.22);
+      border: 1px solid #ff9900;
+      color: #ffbd4a;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .stage {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 195px;
+      height: 195px;
+      pointer-events: none;
+    }
+
+    .pink-core-glow {
+      position: absolute;
+      width: 125px;
+      height: 125px;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle,
+        rgba(255, 28, 138, 0.72) 0%,
+        rgba(214, 15, 112, 0.42) 48%,
+        rgba(120, 8, 72, 0.12) 72%,
+        rgba(0, 0, 0, 0) 100%
+      );
+      box-shadow: 0 0 38px rgba(255, 24, 130, 0.38), inset 0 0 26px rgba(255, 75, 160, 0.35);
+      transition: transform 0.35s ease, opacity 0.35s ease;
+      pointer-events: none;
+    }
+
+    .stage.active .pink-core-glow {
+      transform: scale(1.18);
+      opacity: 1;
+    }
+
+    canvas {
+      position: relative;
+      z-index: 2;
+      display: block;
+      width: 195px;
+      height: 195px;
+      pointer-events: none;
+    }
+
+    .controls {
+      position: relative;
+      z-index: 20;
+      text-align: center;
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #status {
+      width: 100%;
+      font-size: 0.9rem;
+      color: #d9f8ff;
+      background: rgba(4, 13, 28, 0.78);
+      border: 1px solid rgba(41, 244, 255, 0.28);
+      border-radius: 12px;
+      padding: 8px 12px;
+      min-height: 42px;
+      max-height: 78px;
+      overflow-y: auto;
+      line-height: 1.35;
+    }
+
+    .chat-box {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+      z-index: 25;
+    }
+
+    #msgInput {
+      flex: 1;
+      background: rgba(5, 14, 30, 0.88);
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      color: #ffffff;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      outline: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    #sendBtn {
+      background: rgba(0, 240, 255, 0.22);
+      border: 1px solid #00f0ff;
+      color: #00f0ff;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    #micBtn {
+      position: relative;
+      z-index: 30;
+      touch-action: manipulation;
+      background: rgba(0, 240, 255, 0.22);
+      border: 2px solid #00f0ff;
+      color: #00f0ff;
+      padding: 12px 34px;
+      font-size: 1.04rem;
+      border-radius: 30px;
+      font-weight: bold;
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.42);
+      cursor: pointer;
+    }
+
+    #micBtn.listening {
+      background: #ff2a85;
+      color: #ffffff;
+      border-color: #ffad33;
+      box-shadow: 0 0 22px rgba(255, 42, 133, 0.75);
+    }
+  </style>
+</head>
+<body>
+  <div class="top-box">
+    <input id="keyInput" type="text" placeholder="API Key yahan daalein...">
+    <button id="saveKeyBtn" type="button">Save</button>
+  </div>
+
+  <div class="stage" id="stageBox">
+    <div class="pink-core-glow"></div>
+    <canvas id="sphereCanvas" width="195" height="195"></canvas>
+  </div>
+
+  <div class="controls">
+    <div id="status">नमस्ते सर, मैं आयरा हूँ। लिखें या माइक दबाकर बोलें...</div>
+
+    <div class="chat-box">
+      <input id="msgInput" type="text" placeholder="Yahan likh kar bhejein...">
+      <button id="sendBtn" type="button">Send</button>
+    </div>
+
+    <button id="micBtn" type="button">🎤 Speak / बोलें</button>
+  </div>
+
+  <script>
+    const keyInput = document.getElementById('keyInput');
+    const saveKeyBtn = document.getElementById('saveKeyBtn');
+    const statusText = document.getElementById('status');
+    const msgInput = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const micBtn = document.getElementById('micBtn');
+
+    let API_KEY = localStorage.getItem('saved_gemini_key') || "";
+    if (API_KEY) keyInput.value = API_KEY;
+
+    saveKeyBtn.addEventListener('click', () => {
+      API_KEY = keyInput.value.replace(/\s+/g, '');
+      localStorage.setItem('saved_gemini_key', API_KEY);
+      statusText.innerText = API_KEY ? "Key save ho gayi hai sir." : "Key khali hai sir.";
+    });
+
+    const canvas = document.getElementById('sphereCanvas');
+    const ctx = canvas.getContext('2d');
+    const stageBox = document.getElementById('stageBox');
+
+    const CX = 97.5, CY = 97.5;
+    let angleY = 0;
+    let angleX = 0.25;
+    let rotSpeed = 0.014;
+    let spread = 0;
+    let targetSpread = 0;
+
+    const particles = [];
+    const totalDots = 300;
+
+    for (let i = 0; i < totalDots; i++) {
+      const phi = Math.acos(-1 + (2 * i) / totalDots);
+      const theta = Math.sqrt(totalDots * Math.PI) * phi;
+
+      const dirX = Math.cos(theta) * Math.sin(phi);
+      const dirY = Math.sin(theta) * Math.sin(phi);
+      const dirZ = Math.cos(phi);
+
+      const baseRadius = 35 + (i % 7) * 2.8;
+      const isOrange = i % 3 === 0;
+      const isPinkAccent = i % 5 === 0;
+
+      particles.push({
+        baseX: baseRadius * dirX,
+        baseY: baseRadius * dirY,
+        baseZ: baseRadius * dirZ,
+        dirX,
+        dirY,
+        dirZ,
+        radius: 1.65 + (i % 4) * 0.5,
+        phase: i * 0.37,
+        isOrange,
+        isPinkAccent
+      });
+    }
+
+    function setSpeakingState(isActive) {
+      if (isActive) {
+        targetSpread = 1;
+        rotSpeed = 0.042;
+        stageBox.classList.add('active');
+      } else {
+        targetSpread = 0;
+        rotSpeed = 0.014;
+        stageBox.classList.remove('active');
+      }
+    }
+
+    function drawSphere() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      spread += (targetSpread - spread) * 0.09;
+
+      const coreGrad = ctx.createRadialGradient(CX, CY, 6, CX, CY, 76);
+      coreGrad.addColorStop(0, 'rgba(255, 45, 148, 0.78)');
+      coreGrad.addColorStop(0.55, 'rgba(195, 14, 105, 0.42)');
+      coreGrad.addColorStop(1, 'rgba(195, 14, 105, 0)');
+      ctx.beginPath();
+      ctx.arc(CX, CY, 76, 0, Math.PI * 2);
+      ctx.fillStyle = coreGrad;
+      ctx.fill();
+
+      const projected = particles.map((p) => {
+        const pulse = Math.sin(Date.now() * 0.004 + p.phase) * 1.7;
+        const pushOut = spread * 24 + pulse;
+
+        const px = p.baseX + p.dirX * pushOut;
+        const py = p.baseY + p.dirY * pushOut;
+        const pz = p.baseZ + p.dirZ * pushOut;
+
+        const x1 = px * Math.cos(angleY) - pz * Math.sin(angleY);
+        const z1 = pz * Math.cos(angleY) + px * Math.sin(angleY);
+
+        const y2 = py * Math.cos(angleX) - z1 * Math.sin(angleX);
+        const z2 = z1 * Math.cos(angleX) + py * Math.sin(angleX);
+
+        const perspective = 175 / (175 + z2);
+        return {
+          sx: CX + x1 * perspective,
+          sy: CY + y2 * perspective,
+          z: z2,
+          r: Math.max(1.0, p.radius * perspective),
+          isOrange: p.isOrange,
+          isPinkAccent: p.isPinkAccent
+        };
+      });
+
+      projected.sort((a, b) => b.z - a.z);
+
+      projected.forEach((pt) => {
+        let color;
+        if (pt.isOrange) {
+          color = pt.z < 0 ? '#ff9d1c' : '#c96800';
+        } else if (pt.isPinkAccent) {
+          color = pt.z < 0 ? '#ff6ec7' : '#b51777';
+        } else {
+          color = pt.z < 0 ? '#3bf4ff' : '#0088b8';
+        }
+
+        ctx.beginPath();
+        ctx.arc(pt.sx, pt.sy, pt.r * 1.45, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(pt.sx, pt.sy, pt.r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      });
+
+      angleY += rotSpeed;
+      requestAnimationFrame(drawSphere);
+    }
+    drawSphere();
+
+    function speak(text) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const cleanText = text.replace(/[*#_]/g, '');
+      const u = new SpeechSynthesisUtterance(cleanText);
+      u.lang = 'hi-IN';
+      u.pitch = 1.1;
+      u.rate = 1.0;
+      u.onstart = () => setSpeakingState(true);
+      u.onend = () => setSpeakingState(false);
+      u.onerror = () => setSpeakingState(false);
+      window.speechSynthesis.speak(u);
+    }
+
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let chatHistory = [];
+    let isRecognizing = false;
+
+    // Multiple server/model routes in priority order
+    const SERVER_ROUTES = [
+      { version: 'v1beta', model: 'gemini-3.8-flash' },
+      { version: 'v1', model: 'gemini-3.8-flash' },
+      { version: 'v1beta', model: 'gemini-3.8-flash-lite' },
+      { version: 'v1beta', model: 'gemini-3.0-flash' },
+      { version: 'v1', model: 'gemini-3.0-flash' }
+    ];
+
+    async function callSingleRoute(route, currentKey, systemRule, historySlice) {
+      const url = `https://generativelanguage.googleapis.com/${route.version}/models/${route.model}:generateContent`;
+      const payload = {
+        contents: historySlice
+      };
+      if (route.version === 'v1beta') {
+        payload.systemInstruction = { parts: [{ text: systemRule }] };
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': currentKey
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error?.message || `HTTP ${res.status}`);
+      }
+
+      const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!candidateText) {
+        throw new Error("Khali jawab aaya");
+      }
+      return candidateText;
+    }
+
+    async function askAssistant(command) {
+      const currentKey = (keyInput.value || API_KEY).replace(/\s+/g, '');
+      if (!currentKey) {
+        statusText.innerText = "Upar box mein API key daal kar Save dabayein sir.";
+        return;
+      }
+
+      statusText.innerText = "Soch rahi hoon sir...";
+      setSpeakingState(true);
+
+      const systemRule = `तुम आयरा नाम की पर्सनल वॉइस असिस्टेंट हो। यूज़र को "सर" कहो। हर सवाल का छोटा और सीधा जवाब हिंदी में दो।
+अगर कॉल करने कहें तो [CALL:नंबर], यूट्यूब/गाने चलाने कहें तो [YT:नाम], गूगल सर्च कहें तो [GO:शब्द], जीमेल खोलने कहें तो [MAIL:] लिखो।`;
+
+      const nextHistory = [...chatHistory, { role: "user", parts: [{ text: command }] }].slice(-6);
+      let reply = null;
+      let lastError = null;
+
+      for (let i = 0; i < SERVER_ROUTES.length; i++) {
+        const route = SERVER_ROUTES[i];
+        try {
+          if (i > 0) {
+            statusText.innerText = `Dusre server (${route.model}) se jawab la rahi hoon sir...`;
+          }
+          reply = await callSingleRoute(route, currentKey, systemRule, nextHistory);
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      if (!reply) {
+        setSpeakingState(false);
+        statusText.innerText = "Truti: " + (lastError ? lastError.message : "Sabhi servers busy hain sir.");
+        return;
+      }
+
+      chatHistory = [...nextHistory, { role: "model", parts: [{ text: reply }] }].slice(-6);
+
+      if (reply.includes('[CALL:')) {
+        const match = reply.match(/\[CALL:(.*?)\]/);
+        if (match) {
+          const num = match[1].replace(/[^0-9+]/g, '');
+          reply = reply.replace(/\[CALL:.*?\]/, '').trim();
+          setTimeout(() => location.href = 'tel:' + num, 1000);
+        }
+      } else if (reply.includes('[YT:')) {
+        const match = reply.match(/\[YT:(.*?)\]/);
+        if (match) {
+          const q = match[1];
+          reply = reply.replace(/\[YT:.*?\]/, '').trim();
+          setTimeout(() => window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank'), 1000);
+        }
+      } else if (reply.includes('[GO:')) {
+        const match = reply.match(/\[GO:(.*?)\]/);
+        if (match) {
+          const q = match[1];
+          reply = reply.replace(/\[GO:.*?\]/, '').trim();
+          setTimeout(() => window.open('https://www.google.com/search?q=' + encodeURIComponent(q), '_blank'), 1000);
+        }
+      } else if (reply.includes('[MAIL:]')) {
+        reply = reply.replace('[MAIL:]', '').trim();
+        setTimeout(() => window.open('https://mail.google.com', '_blank'), 1000);
+      }
+
+      statusText.innerText = reply;
+      speak(reply);
+    }
+
+    function sendTypedMessage() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+      msgInput.value = "";
+      statusText.innerText = "Aap: " + text;
+      askAssistant(text);
+    }
+
+    sendBtn.addEventListener('click', sendTypedMessage);
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendTypedMessage();
+      }
+    });
+
+    if (SpeechRec) {
+      const rec = new SpeechRec();
+      rec.lang = 'hi-IN';
+      rec.interimResults = false;
+
+      micBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isRecognizing) {
+          try { rec.stop(); } catch (err) {}
+          return;
+        }
+        try {
+          rec.start();
+        } catch (err) {
+          statusText.innerText = "Mic shuru karne mein dikkat aayi sir, dobara dabayein.";
+        }
+      });
+
+      rec.onstart = () => {
+        isRecognizing = true;
+        micBtn.classList.add('listening');
+        statusText.innerText = "Sun rahi hoon sir...";
+        setSpeakingState(true);
+      };
+
+      rec.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        statusText.innerText = "Aap: " + text;
+        micBtn.classList.remove('listening');
+        askAssistant(text);
+      };
+
+      rec.onerror = (e) => {
+        isRecognizing = false;
+        micBtn.classList.remove('listening');
+        setSpeakingState(false);
+        if (e.error === 'not-allowed') {
+          statusText.innerText = "Browser ki setting mein mic ki permission dein sir.";
+        } else {
+          statusText.innerText = "Aawaz nahi aayi sir, dobara dabayein.";
+        }
+      };
+
+      rec.onend = () => {
+        isRecognizing = false;
+        micBtn.classList.remove('listening');
+        if (!window.speechSynthesis.speaking) {
+          setSpeakingState(false);
+        }
+      };
+    } else {
+      statusText.innerText = "Is browser mein voice support nahi hai, Chrome use karein sir.";
+    }
+  </script>
+</body>
+  </html>
+  
